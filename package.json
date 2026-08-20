@@ -2,13 +2,26 @@
   "name": "filebud",
   "version": "0.1.0",
   "description": "Browse a folder or archive as a file tree in your browser",
-  "type": "module",
+  "keywords": [
+    "cli",
+    "file-browser",
+    "file-tree",
+    "viewer",
+    "zip",
+    "tar"
+  ],
+  "homepage": "https://github.com/ernilambar/filebud#readme",
+  "bugs": {
+    "url": "https://github.com/ernilambar/filebud/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ernilambar/filebud.git"
+  },
   "license": "MIT",
+  "type": "module",
   "bin": {
     "filebud": "./bin/filebud.js"
-  },
-  "engines": {
-    "node": ">=22"
   },
   "files": [
     "bin",
@@ -17,16 +30,11 @@
   ],
   "scripts": {
     "build": "rollup -c",
-    "start": "node bin/filebud.js",
     "lint": "standard",
     "lint:fix": "standard --fix",
-    "test": "node --test test/*.test.js",
-    "prepare": "npm run build"
-  },
-  "standard": {
-    "ignore": [
-      "public/editor/"
-    ]
+    "prepare": "npm run build",
+    "start": "node bin/filebud.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "@codemirror/language-data": "6.5.2",
@@ -43,5 +51,13 @@
     "@rollup/plugin-node-resolve": "16.0.3",
     "rollup": "4.62.4",
     "standard": "17.1.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "standard": {
+    "ignore": [
+      "public/editor/"
+    ]
   }
 }
