@@ -57,12 +57,15 @@ no-save behaviour is signalled explicitly:
   Dev: `standard@17.1.2`, `rollup@4.62.4`, `@rollup/plugin-node-resolve@16.0.3`.
 - Scripts: `build` (rollup), `start`, `lint`, `lint:fix`, `test`,
   `prepare` (runs `build`, so a git clone and an npm install both produce a bundle).
-- `rollup.config.mjs`: input `src/editor/main.mjs`, output `public/editor.bundle.js`
-  as `iife`, with `nodeResolve()`.
-- `standard` ignores the generated `public/editor.bundle.js`. `.editorconfig`
-  already carries a `[*.{js,mjs,cjs}]` space/2 override so it agrees with
-  `standard`; tabs stay for everything else.
-- Extend `.gitignore` with `/tmp/` and `public/editor.bundle.js`.
+- `rollup.config.mjs`: input `src/editor/main.mjs`, output directory
+  `public/editor/` as `es` with code splitting. Not a single `iife` file:
+  `@codemirror/language-data` loads each language mode via dynamic `import()`, and
+  Rollup rejects code-splitting into an IIFE. Splitting is what makes the lazy mode
+  loading work — `main.js` plus one chunk per language.
+- `standard` ignores the generated `public/editor/`. `.editorconfig` already carries
+  a `[*.{js,mjs,cjs}]` space/2 override so it agrees with `standard`; tabs stay for
+  everything else.
+- Extend `.gitignore` with `/tmp/` and `/public/editor/`.
 
 **Directory layout**
 
@@ -83,15 +86,15 @@ src/editor/main.mjs     # rollup entry: basicSetup + oneDark, exports a mount AP
 public/index.html
 public/app.js           # tree + pane wiring (plain ESM, loaded directly)
 public/style.css        # dark theme
-public/editor.bundle.js # rollup output (gitignored, built by `prepare`)
+public/editor/          # rollup output: main.js + chunks/ (gitignored, built by `prepare`)
 test/                   # node:test
 ```
 
 The editor bundle is the only bundled artifact. `app.js` stays hand-written ESM the
 browser loads as-is, so tree and UI work needs no build step.
 
-**Exit criteria:** `npm run lint` passes; `npm run build` emits
-`public/editor.bundle.js`; `node bin/filebud.js --help` prints usage.
+**Exit criteria:** `npm run lint` passes; `npm run build` emits `public/editor/`;
+`node bin/filebud.js --help` prints usage.
 
 ---
 

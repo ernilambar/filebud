@@ -1,0 +1,47 @@
+{
+  "name": "filebud",
+  "version": "0.1.0",
+  "description": "Browse a folder or archive as a file tree in your browser",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "filebud": "./bin/filebud.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin",
+    "src",
+    "public"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "start": "node bin/filebud.js",
+    "lint": "standard",
+    "lint:fix": "standard --fix",
+    "test": "node --test test/*.test.js",
+    "prepare": "npm run build"
+  },
+  "standard": {
+    "ignore": [
+      "public/editor/"
+    ]
+  },
+  "dependencies": {
+    "@codemirror/language-data": "6.5.2",
+    "@codemirror/theme-one-dark": "6.1.3",
+    "@fastify/static": "10.1.3",
+    "@xhmikosr/decompress": "11.1.4",
+    "cac": "7.0.0",
+    "codemirror": "6.0.2",
+    "fastify": "5.12.1",
+    "open": "11.0.1",
+    "undici": "8.10.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "rollup": "4.62.4",
+    "standard": "17.1.2"
+  }
+}

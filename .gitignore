@@ -40,4 +40,8 @@ Thumbs.db
 /build/
 /deploy/
 /node_modules/
+/tmp/
 /vendor/
+
+# Generated editor bundle (built by `npm run build`)
+/public/editor/
