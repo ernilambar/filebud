@@ -2,29 +2,46 @@ import { createWriteStream } from 'node:fs'
 import { access, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, extname, join, resolve } from 'node:path'
 import { pipeline } from 'node:stream/promises'
-import { request } from 'undici'
+import { Transform } from 'node:stream'
+import { Agent, interceptors, request } from 'undici'
 import { createTempDir } from './tempdir.js'
 import { extract } from './extract.js'
 
-const ARCHIVE_EXTENSIONS = new Set([
+const redirectDispatcher = new Agent().compose(
+  interceptors.redirect({ maxRedirections: 5 })
+)
+
+const ARCHIVE_EXTENSIONS = [
   '.zip',
   '.tar',
-  '.gz', // bare .tar.gz is matched by the two-extension check below
+  '.tar.gz',
   '.tgz',
-  '.bz2',
+  '.tar.bz2',
   '.tbz2'
-])
+]
 
 const DOWNLOAD_CAP = 150 * 1024 * 1024 // 150 MB
 
-function isUrl (input) {
-  return input.startsWith('http://') || input.startsWith('https://')
+export function isArchiveExt (filePath) {
+  if (typeof filePath !== 'string') return false
+  const lower = filePath.toLowerCase()
+  return ARCHIVE_EXTENSIONS.some((ext) => lower.endsWith(ext))
 }
 
-function isArchiveExt (filePath) {
-  const lower = filePath.toLowerCase()
-  if (lower.endsWith('.tar.gz') || lower.endsWith('.tar.bz2')) return true
-  return ARCHIVE_EXTENSIONS.has(extname(lower))
+function isUrl (input) {
+  if (typeof input !== 'string') return false
+  try {
+    const url = new URL(input)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function formatBytes (bytes) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 /**
@@ -32,8 +49,12 @@ function isArchiveExt (filePath) {
  * Returns the path of the downloaded file.
  */
 async function download (url, destDir) {
+  const parsedUrl = new URL(url)
+  const rawBaseName = basename(parsedUrl.pathname)
+  const fileName = rawBaseName ? decodeURIComponent(rawBaseName) : 'archive'
+
   const response = await request(url, {
-    maxRedirections: 5,
+    dispatcher: redirectDispatcher,
     headers: { 'user-agent': 'filebud' }
   })
 
@@ -46,42 +67,44 @@ async function download (url, destDir) {
   }
 
   const contentLength = parseInt(response.headers['content-length'] || '0', 10)
-  const fileName = basename(new URL(url).pathname) || 'archive'
-  const destPath = join(destDir, fileName)
+  if (contentLength > DOWNLOAD_CAP) {
+    await response.body.dump().catch(() => {})
+    throw new Error('archive exceeds the 150 MB download limit')
+  }
 
+  const destPath = join(destDir, fileName)
   let received = 0
   const writer = createWriteStream(destPath)
 
-  response.body.on('data', (chunk) => {
-    received += chunk.length
+  const progressStream = new Transform({
+    transform (chunk, encoding, callback) {
+      received += chunk.length
 
-    if (received > DOWNLOAD_CAP) {
-      writer.destroy()
-      response.body.destroy(
-        new Error('archive exceeds the 150 MB download limit')
+      if (received > DOWNLOAD_CAP) {
+        callback(new Error('archive exceeds the 150 MB download limit'))
+        return
+      }
+
+      const pct = contentLength > 0
+        ? ` (${Math.round((received / contentLength) * 100)}%)`
+        : ''
+
+      process.stderr.write(
+        `\rdownloading ${formatBytes(received)}${pct}   `
       )
-      return
+      callback(null, chunk)
     }
-
-    const pct = contentLength
-      ? ` (${Math.round((received / contentLength) * 100)}%)`
-      : ''
-
-    process.stderr.write(
-      `\rdownloading ${formatBytes(received)}${pct}   `
-    )
   })
 
-  await pipeline(response.body, writer)
-  process.stderr.write('\n')
+  try {
+    await pipeline(response.body, progressStream, writer)
+  } finally {
+    if (received > 0) {
+      process.stderr.write('\n')
+    }
+  }
 
   return destPath
-}
-
-function formatBytes (bytes) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 /**
@@ -92,9 +115,9 @@ function formatBytes (bytes) {
 async function unwrapSingleRoot (dir) {
   const entries = await readdir(dir, { withFileTypes: true })
   const dirs = entries.filter((e) => e.isDirectory())
-  const files = entries.filter((e) => e.isFile())
+  const nonDirs = entries.filter((e) => !e.isDirectory())
 
-  if (dirs.length === 1 && files.length === 0) {
+  if (dirs.length === 1 && nonDirs.length === 0) {
     return join(dir, dirs[0].name)
   }
 
@@ -111,18 +134,28 @@ async function unwrapSingleRoot (dir) {
 export async function resolveSource (input) {
   // ── URL branch ──────────────────────────────────────────────────────────────
   if (isUrl(input)) {
-    const tmpDir = await createTempDir()
-    const archivePath = await download(input, tmpDir)
-
-    if (!isArchiveExt(archivePath)) {
+    const parsedUrl = new URL(input)
+    const urlName = basename(parsedUrl.pathname)
+    if (urlName && extname(urlName) && !isArchiveExt(urlName)) {
       throw new Error(
-        `unsupported archive type: ${basename(archivePath)}; ` +
-        'expected a zip, tar, tar.gz, or tar.bz2 archive'
+        `unsupported input: ${input}; ` +
+        'expected a directory or a zip/tar/tar.gz/tar.bz2 archive'
       )
     }
 
+    const tmpDir = await createTempDir()
+    const archivePath = await download(input, tmpDir)
+
     const extractDir = join(tmpDir, 'extracted')
-    await extract(archivePath, extractDir)
+    const entries = await extract(archivePath, extractDir)
+
+    if ((!entries || entries.length === 0) && (!urlName || !isArchiveExt(urlName))) {
+      throw new Error(
+        `unsupported input: ${input}; ` +
+        'expected a directory or a zip/tar/tar.gz/tar.bz2 archive'
+      )
+    }
+
     const root = await unwrapSingleRoot(extractDir)
 
     return { root, label: input, isTemp: true }
