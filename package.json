@@ -49,7 +49,7 @@
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "16.0.3",
-    "rollup": "4.62.4",
+    "rollup": "4.62.5",
     "standard": "17.1.2"
   },
   "engines": {

@@ -4,9 +4,6 @@ Browse a folder or archive as a file tree in your browser. Point it at a directo
 a zip/tar archive, or an archive URL, and it serves a dark-themed file tree with a
 syntax-highlighted viewer.
 
-> **Status:** working end to end — folder, local archive, and remote archive URL
-> inputs all resolve and serve.
-
 ## Install
 
 ```sh
@@ -34,36 +31,18 @@ session token, then opens your browser at that URL (unless `--no-open`).
 
 | Flag | Description |
 | --- | --- |
-| `--port <n>` | Port to listen on (1024–65535, default `49800`). Fails if the port is busy rather than picking another. |
+| `--port <n>` | Port to listen on (1024–65535, default `49800`). Fails if the port is busy. |
 | `--all` | Include `.git` and `node_modules` in the tree. Hidden by default. |
 | `--no-open` | Do not open the browser automatically. |
 | `-h`, `--help` | Show usage. |
 | `-v`, `--version` | Show version. |
 
-## Security
-
-The server binds to `127.0.0.1` only, and every `/api/*` request must carry a
-session token that is generated at boot and injected into the served page.
-Without it, any local process — or any web page you visit — could hit the port
-and read the served tree. This is a local browsing tool: it is not intended for
-shared or multi-user machines.
-
-## Notes
-
-**Nothing is written to disk.** The editor is fully editable so you can scratch
-notes or try an edit, but there is no save — changes are lost on reload.
-
-**Loopback only.** See [Security](#security) — loopback bind plus a mandatory
-session token, not meant for shared machines.
-
-Supported archives: `zip`, `tar`, `tar.gz`, `tar.bz2`. Remote downloads are capped
-at 150 MB.
 
 ## Development
 
 ```sh
 npm install
-npm run build   # bundle the CodeMirror editor into public/editor/
+npm run build
 npm test
 npm run lint
 ```
@@ -74,37 +53,11 @@ manually.
 
 ## Contributing
 
-Contributions are welcome! To work on the repo:
+Contributions are welcome!
 
-1. Fork and clone the repository, then install dependencies:
-
-   ```sh
-   git clone https://github.com/ernilambar/filebud.git
-   cd filebud
-   npm install
-   ```
-
-2. Before opening a pull request, make sure all of these pass:
-
-   ```sh
-   npm run lint    # standard style, no warnings
-   npm test        # node:test suite
-   npm run build   # editor bundle builds cleanly
-   ```
-
-3. Keep pull requests focused: one fix or feature per PR, with a short
-   description of what changed and why.
-
-A few conventions the codebase follows:
-
-- **Plain ESM everywhere** (`"type": "module"`); dependencies are pinned to
-  exact versions.
-- **Tests live in `test/`** using the built-in `node:test` runner — no extra
-  test framework. Add a test for any bug fix or new behaviour.
-- **Nothing is ever written back to disk** except tool-created temp dirs under
-  `os.tmpdir()`. Any change must preserve that guarantee.
-- **The frontend has no build step** — `public/app.js` is hand-written ESM
-  loaded directly by the browser. Only `src/editor/` goes through Rollup.
+1. Fork, clone, and run `npm install`.
+2. Ensure `npm run lint`, `npm test`, and `npm run build` all pass.
+3. Open a focused PR (one fix or feature) with a short description.
 
 ## Manual Testing
 
@@ -140,4 +93,5 @@ While browsing, also verify the UI basics:
 
 ## License
 
-MIT
+[MIT](LICENSE) © 2026 [Nilambar Sharma](https://www.nilambar.net)
+
