@@ -1,8 +1,26 @@
 # filebud
 
-Browse a folder or archive as a file tree in your browser. Point it at a directory,
-a zip/tar archive, or an archive URL, and it serves a dark-themed file tree with a
-syntax-highlighted viewer.
+> Peek inside any folder or archive instantly — a browsable file tree with a
+> syntax-highlighted viewer in your browser.
+
+filebud is a read-only local viewer. Point it at a directory or a zip/tar
+archive — local or remote — and it serves a dark-themed file tree you can
+explore. Nothing is ever written to disk; extracted archives live in a temp
+dir that is removed when filebud exits.
+
+## Features
+
+- **Folder and archive preview** — browse `zip`, `tar`, `tar.gz`, `tgz`,
+  `tar.bz2`, `tbz2` without extracting them yourself; remote archive URLs are
+  downloaded for you.
+- **Syntax-highlighted viewer** — CodeMirror-powered editor pane for text,
+  code, and images; binary files get size info and download.
+- **Read-only by design** — edits stay in a scratch pad in memory; Cmd/Ctrl-S
+  reminds you nothing is saved.
+- **Safe by default** — zip-slip and symlink protection, extraction and
+  download size caps, loopback-only server guarded by a one-time session token.
+- **Fast tree navigation** — keyboard-driven tree, hidden `.git` /
+  `node_modules` unless you ask for them (`--all`).
 
 ## Install
 
@@ -15,14 +33,25 @@ Requires Node 22 or newer.
 ## Usage
 
 ```sh
-filebud ./some/folder
-filebud ./archive.zip
-filebud ./archive.tar.gz
-filebud https://example.com/archive.zip
+filebud <folder | archive | archive-url> [options]
 ```
 
-Archives are extracted to a temporary directory, which is removed when filebud
-exits. A folder you pass is only ever read, never modified.
+### Examples
+
+```sh
+# Browse a folder
+filebud ~/projects/my-app
+
+# Preview an archive without extracting it
+filebud ./backup.tar.gz
+filebud ~/downloads/release.zip
+
+# Preview a remote archive straight from a URL
+filebud https://example.com/artifact.zip
+
+# Include .git and node_modules, use a custom port, skip opening the browser
+filebud ./my-app --all --port 3000 --no-open
+```
 
 On startup filebud prints the resolved root and a URL carrying a one-time
 session token, then opens your browser at that URL (unless `--no-open`).
