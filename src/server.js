@@ -20,6 +20,27 @@ function getIndexHtml () {
   return cachedIndexHtml
 }
 
+// DNS-rebinding defence. The token is baked into index.html served at /, so a
+// page that can read / same-origin owns the session. Rejecting any Host other
+// than the loopback names makes rebound domains unusable.
+const ALLOWED_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]', '::1'])
+
+export function hostnameFromHostHeader (host) {
+  if (!host) return ''
+  const lower = host.toLowerCase()
+  if (lower.startsWith('[')) {
+    const end = lower.indexOf(']')
+    return end === -1 ? lower : lower.slice(0, end + 1)
+  }
+  // Bare (unbracketed) IPv6 like ::1 has more than one colon.
+  if ((lower.match(/:/g) || []).length > 1) return lower
+  return lower.split(':')[0]
+}
+
+function isAllowedHost (host) {
+  return ALLOWED_HOSTNAMES.has(hostnameFromHostHeader(host))
+}
+
 function tokensMatch (supplied, token) {
   const suppliedBuf = Buffer.from(supplied)
   const tokenBuf = Buffer.from(token)
@@ -46,15 +67,26 @@ export async function createServer (config) {
     logger: false
   })
 
-  // Global error handler: never leak stack traces, always return JSON { error }
+  // Global error handler: never leak stack traces, always return JSON { error }.
+  // Unexpected errors (5xx) get a generic message — their .message can contain
+  // absolute filesystem paths from ENOENT/EACCES races.
   app.setErrorHandler((error, request, reply) => {
     const statusCode = error.statusCode && error.statusCode >= 400 && error.statusCode < 600
       ? error.statusCode
       : 500
 
-    reply.code(statusCode).send({
-      error: error.message || 'Internal Server Error'
-    })
+    const message = statusCode >= 500
+      ? 'Internal Server Error'
+      : (error.message || 'Internal Server Error')
+
+    reply.code(statusCode).send({ error: message })
+  })
+
+  // Host gate: only loopback hostnames may talk to this server.
+  app.addHook('onRequest', async (request, reply) => {
+    if (!isAllowedHost(request.headers.host)) {
+      return reply.code(403).send({ error: 'invalid host header' })
+    }
   })
 
   // Session token gate. Every /api/* request must carry the token generated at

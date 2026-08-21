@@ -105,6 +105,30 @@ test('isSafeEntry rejects null bytes and invalid entries', () => {
 
 // ── extract ───────────────────────────────────────────────────────────────────
 
+test('extract aborts and cleans up when output exceeds the size cap', async () => {
+  const workDir = join(tmpdir(), `filebud-test-bomb-${Date.now()}`)
+  const archivePath = join(workDir, 'bomb.tar')
+  const destDir = join(workDir, 'output')
+
+  mkdirSync(workDir, { recursive: true })
+
+  try {
+    const tarBuffer = createTarBuffer([
+      { name: 'big.txt', data: 'x'.repeat(4096) },
+      { name: 'small.txt', data: 'ok' }
+    ])
+    writeFileSync(archivePath, tarBuffer)
+
+    await assert.rejects(
+      extract(archivePath, destDir, { maxBytes: 1024 }),
+      /extracted size limit/
+    )
+    assert.ok(!existsSync(destDir), 'destination must be removed after abort')
+  } finally {
+    rmSync(workDir, { recursive: true, force: true })
+  }
+})
+
 test('extract unpacks a safe tar archive', async () => {
   const workDir = join(tmpdir(), `filebud-test-extract-${Date.now()}`)
   const archivePath = join(workDir, 'archive.tar')

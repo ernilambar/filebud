@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { promisify } from 'node:util'
 import { execFile } from 'node:child_process'
-import { resolveSource, isArchiveExt } from '../src/source.js'
+import { resolveSource, isArchiveExt, safeDownloadName } from '../src/source.js'
 import { cleanupAll, _resetForTest } from '../src/tempdir.js'
 
 const execFileAsync = promisify(execFile)
@@ -42,6 +42,25 @@ test('isArchiveExt rejects unsupported or non-archive extensions', () => {
   assert.equal(isArchiveExt('file.zip.bak'), false)
   assert.equal(isArchiveExt(''), false)
   assert.equal(isArchiveExt(null), false)
+})
+
+// ── safeDownloadName ──────────────────────────────────────────────────────────
+
+test('safeDownloadName extracts a plain basename from a URL', () => {
+  assert.equal(safeDownloadName('https://example.com/archive.zip'), 'archive.zip')
+  assert.equal(safeDownloadName('https://example.com/path/to/pkg.tar.gz'), 'pkg.tar.gz')
+  assert.equal(safeDownloadName('https://example.com/my%20file.zip'), 'my file.zip')
+})
+
+test('safeDownloadName neutralizes traversal, absolute paths, and bad encodings', () => {
+  // Percent-decoded traversal must not survive
+  assert.equal(safeDownloadName('https://example.com/%2e%2e%2fevil.zip'), 'evil.zip')
+  assert.equal(safeDownloadName('https://example.com/..%2f..%2fpwned.zip'), 'pwned.zip')
+  // Malformed percent sequences fall back instead of throwing
+  assert.equal(safeDownloadName('https://example.com/bad%ZZname.zip'), 'bad%ZZname.zip')
+  // Empty path falls back to 'archive'
+  assert.equal(safeDownloadName('https://example.com/'), 'archive')
+  assert.equal(safeDownloadName('https://example.com/%2e%2e'), 'archive')
 })
 
 // ── resolveSource: folder branch ──────────────────────────────────────────────

@@ -5,6 +5,40 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { createServer } from '../src/server.js'
+import Fastify from 'fastify'
+import { fileRoutes } from '../src/routes/file.js'
+
+test('GET /api/file enforces the hard size ceiling even with force=1', async () => {
+  const root = join(tmpdir(), `filebud-file-${Date.now()}`)
+  mkdirSync(root, { recursive: true })
+  // Caps are injected tiny so no huge fixture is needed:
+  // maxSize 10 B, hardMaxSize 20 B.
+  writeFileSync(join(root, 'mid.txt'), 'a'.repeat(15))
+  writeFileSync(join(root, 'over.txt'), 'b'.repeat(25))
+
+  try {
+    const app = Fastify()
+    await app.register(fileRoutes, { root, maxSize: 10, hardMaxSize: 20 })
+
+    // mid.txt (15 B): over soft cap, under hard cap — force bypasses
+    const resMid = await app.inject({ method: 'GET', url: '/api/file?path=mid.txt' })
+    assert.equal(JSON.parse(resMid.body).kind, 'too-large')
+    const resMidForce = await app.inject({ method: 'GET', url: '/api/file?path=mid.txt&force=1' })
+    assert.equal(JSON.parse(resMidForce.body).kind, 'text')
+
+    // over.txt (25 B): over hard cap — force must NOT bypass
+    const resOver = await app.inject({ method: 'GET', url: '/api/file?path=over.txt&force=1' })
+    assert.equal(resOver.statusCode, 200)
+    const dataOver = JSON.parse(resOver.body)
+    assert.equal(dataOver.kind, 'too-large')
+    assert.equal(dataOver.reason, 'size')
+    assert.equal(dataOver.content, undefined)
+
+    await app.close()
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
 
 test('GET /api/file returns text content and language for code files', async () => {
   const root = join(tmpdir(), `filebud-file-${Date.now()}`)

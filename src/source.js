@@ -45,13 +45,43 @@ function formatBytes (bytes) {
 }
 
 /**
+ * Derive a safe file name from a URL. The raw basename is percent-decoded
+ * (malformed sequences fall back to the raw text), then reduced to a bare
+ * name again — decoding can reintroduce `../`, absolute paths, or drive
+ * letters that would escape destDir.
+ */
+export function safeDownloadName (url) {
+  const parsedUrl = new URL(url)
+  const rawBaseName = basename(parsedUrl.pathname)
+
+  let fileName
+  try {
+    fileName = decodeURIComponent(rawBaseName)
+  } catch {
+    fileName = rawBaseName
+  }
+
+  fileName = basename(fileName)
+
+  if (
+    !fileName ||
+    fileName === '.' ||
+    fileName === '..' ||
+    fileName.includes('\\') ||
+    /^[A-Za-z]:/.test(fileName)
+  ) {
+    return 'archive'
+  }
+
+  return fileName
+}
+
+/**
  * Download a remote archive to a temp dir, showing byte progress on stderr.
  * Returns the path of the downloaded file.
  */
 async function download (url, destDir) {
-  const parsedUrl = new URL(url)
-  const rawBaseName = basename(parsedUrl.pathname)
-  const fileName = rawBaseName ? decodeURIComponent(rawBaseName) : 'archive'
+  const fileName = safeDownloadName(url)
 
   const response = await request(url, {
     dispatcher: redirectDispatcher,

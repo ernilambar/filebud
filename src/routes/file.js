@@ -6,7 +6,8 @@ import {
   getFileType,
   hasLongLine,
   isBinaryBuffer,
-  MAX_FILE_SIZE
+  MAX_FILE_SIZE,
+  HARD_MAX_FILE_SIZE
 } from '../lib/filetype.js'
 
 function normalizeRelPath (rel) {
@@ -15,7 +16,11 @@ function normalizeRelPath (rel) {
 }
 
 export async function fileRoutes (fastify, options) {
-  const { root } = options
+  const {
+    root,
+    maxSize = MAX_FILE_SIZE,
+    hardMaxSize = HARD_MAX_FILE_SIZE
+  } = options
 
   fastify.get('/api/file', async (request, reply) => {
     const rawPath = request.query.path || ''
@@ -60,8 +65,9 @@ export async function fileRoutes (fastify, options) {
       }
     }
 
-    // 3. File size cap (> 10 MB) unless force=1
-    if (!force && size > MAX_FILE_SIZE) {
+    // 3. Hard ceiling — applies even with force=1, since the file is read
+    // into memory in full.
+    if (size > hardMaxSize) {
       return {
         path: normalizedPath,
         size,
@@ -71,10 +77,21 @@ export async function fileRoutes (fastify, options) {
       }
     }
 
-    // 4. Read file buffer
+    // 4. File size cap (> 10 MB) unless force=1
+    if (!force && size > maxSize) {
+      return {
+        path: normalizedPath,
+        size,
+        sizeHuman,
+        kind: 'too-large',
+        reason: 'size'
+      }
+    }
+
+    // 5. Read file buffer
     const buffer = await readFile(safePath)
 
-    // 5. Binary sniff (NUL byte or invalid UTF-8 in first 8 KB)
+    // 6. Binary sniff (NUL byte or invalid UTF-8 in first 8 KB)
     if (isBinaryBuffer(buffer)) {
       return {
         path: normalizedPath,
@@ -85,7 +102,7 @@ export async function fileRoutes (fastify, options) {
       }
     }
 
-    // 6. Long lines cap (> 500 KB on a single line) unless force=1
+    // 7. Long lines cap (> 500 KB on a single line) unless force=1
     if (!force && hasLongLine(buffer)) {
       return {
         path: normalizedPath,
@@ -96,7 +113,7 @@ export async function fileRoutes (fastify, options) {
       }
     }
 
-    // 7. Text content
+    // 8. Text content
     const content = buffer.toString('utf8')
 
     return {

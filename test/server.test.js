@@ -3,7 +3,61 @@ import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { createServer, startServer, PortInUseError } from '../src/server.js'
+import { createServer, startServer, PortInUseError, hostnameFromHostHeader } from '../src/server.js'
+
+test('server rejects requests with non-loopback Host header (DNS rebinding)', async () => {
+  const root = join(tmpdir(), `filebud-srv-${Date.now()}`)
+  mkdirSync(root, { recursive: true })
+
+  try {
+    const app = await createServer({ root, label: root })
+
+    for (const host of ['evil.example.com', 'evil.example.com:49800', '192.168.1.5', '169.254.169.254', '[fd00::1]:80']) {
+      const res = await app.inject({ method: 'GET', url: '/', headers: { host } })
+      assert.equal(res.statusCode, 403, `host ${host} must be rejected`)
+      assert.match(JSON.parse(res.body).error, /invalid host header/)
+    }
+
+    // Loopback names still work.
+    for (const host of ['127.0.0.1:49800', 'localhost:49800', '[::1]:49800']) {
+      const res = await app.inject({ method: 'GET', url: '/', headers: { host } })
+      assert.equal(res.statusCode, 200, `host ${host} must be allowed`)
+    }
+
+    await app.close()
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('hostnameFromHostHeader strips ports and normalizes case', () => {
+  assert.equal(hostnameFromHostHeader('127.0.0.1:49800'), '127.0.0.1')
+  assert.equal(hostnameFromHostHeader('LOCALHOST'), 'localhost')
+  assert.equal(hostnameFromHostHeader('[::1]:8080'), '[::1]')
+  assert.equal(hostnameFromHostHeader('::1'), '::1')
+  assert.equal(hostnameFromHostHeader(''), '')
+  assert.equal(hostnameFromHostHeader(undefined), '')
+})
+
+test('server returns generic error body for unexpected errors (no path leak)', async () => {
+  const root = join(tmpdir(), `filebud-srv-${Date.now()}`)
+  mkdirSync(root, { recursive: true })
+
+  try {
+    const app = await createServer({ root, label: root })
+    // Force an unexpected 5xx: a route that throws without statusCode.
+    app.get('/api/boom', async () => {
+      throw new Error(`secret path ${root}/gone.txt`)
+    })
+
+    const res = await app.inject({ method: 'GET', url: '/api/boom' })
+    assert.equal(res.statusCode, 500)
+    assert.deepEqual(JSON.parse(res.body), { error: 'Internal Server Error' })
+    await app.close()
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
 
 test('server serves static index.html at root /', async () => {
   const root = join(tmpdir(), `filebud-srv-${Date.now()}`)

@@ -82,6 +82,8 @@ const TEXT_MIMES = {
 }
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+// Absolute ceiling even with force=1: the whole file is read into memory.
+export const HARD_MAX_FILE_SIZE = 200 * 1024 * 1024 // 200 MB
 export const MAX_LINE_LENGTH = 500 * 1024 // 500 KB
 export const SNIFF_SIZE = 8 * 1024 // 8 KB
 
