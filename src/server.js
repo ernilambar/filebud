@@ -3,6 +3,7 @@ import fastify from 'fastify'
 import fastifyStatic from '@fastify/static'
 import { treeRoutes } from './routes/tree.js'
 import { fileRoutes } from './routes/file.js'
+import { metaRoutes } from './routes/meta.js'
 
 const publicDir = fileURLToPath(new URL('../public', import.meta.url))
 
@@ -45,6 +46,7 @@ export async function createServer (config) {
   // Register API routes
   await app.register(treeRoutes, { root, label, all })
   await app.register(fileRoutes, { root, label, all })
+  await app.register(metaRoutes, { root, label })
 
   return app
 }

@@ -17,38 +17,45 @@ async function loadLanguage (name) {
   return [support]
 }
 
-function baseExtensions () {
-  return [basicSetup, oneDark]
+function baseExtensions (handle) {
+  return [
+    basicSetup,
+    oneDark,
+    EditorView.updateListener.of((update) => {
+      if (update.docChanged && typeof handle.onChange === 'function') {
+        handle.onChange(update.state.doc.toString())
+      }
+    })
+  ]
 }
 
 /**
  * Mount a single EditorView. The same view is reused for the whole session;
- * `setFile` swaps its state instead of recreating it.
+ * `setFile` swaps its state instead of recreating it. `handle.onChange` can be
+ * set by the caller to be notified of document edits (used for dirty tracking).
  */
 export function mount (parent) {
+  const handle = { onChange: null }
+
   const view = new EditorView({
-    state: EditorState.create({ extensions: baseExtensions() }),
+    state: EditorState.create({ extensions: baseExtensions(handle) }),
     parent
   })
 
-  return {
-    view,
+  handle.view = view
 
-    async setFile ({ content = '', language = null } = {}) {
-      const languageExtension = await loadLanguage(language)
+  handle.setFile = async ({ content = '', language = null } = {}) => {
+    const languageExtension = await loadLanguage(language)
 
-      view.setState(EditorState.create({
-        doc: content,
-        extensions: [...baseExtensions(), ...languageExtension]
-      }))
-    },
-
-    getContent () {
-      return view.state.doc.toString()
-    },
-
-    destroy () {
-      view.destroy()
-    }
+    view.setState(EditorState.create({
+      doc: content,
+      extensions: [...baseExtensions(handle), ...languageExtension]
+    }))
   }
+
+  handle.getContent = () => view.state.doc.toString()
+
+  handle.destroy = () => view.destroy()
+
+  return handle
 }

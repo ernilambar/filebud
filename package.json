@@ -58,6 +58,9 @@
   "standard": {
     "ignore": [
       "public/editor/"
+    ],
+    "env": [
+      "browser"
     ]
   }
 }
