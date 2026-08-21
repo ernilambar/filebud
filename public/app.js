@@ -7,6 +7,7 @@ import { iconForFile } from './file-icons.js'
 const treeRootEl = document.getElementById('tree-root')
 const viewerPlaceholderEl = document.getElementById('viewer-placeholder')
 const viewerEditorEl = document.getElementById('viewer-editor')
+const viewerStatusEl = document.getElementById('viewer-status')
 const viewerImageEl = document.getElementById('viewer-image')
 const viewerBinaryEl = document.getElementById('viewer-binary')
 const viewerTooLargeEl = document.getElementById('viewer-too-large')
@@ -42,7 +43,8 @@ const state = {
   focusedPath: null,
   selectedPath: null,
   abortController: null,
-  editor: null
+  editor: null,
+  meta: { root: '', label: '' }
 }
 
 function fetchJSON (url, options) {
@@ -58,8 +60,9 @@ function fetchJSON (url, options) {
 async function loadMeta () {
   try {
     const meta = await fetchJSON('/api/meta')
-    sourceLabelEl.textContent = meta.label ? String(meta.label) : ''
-    sourceRootEl.textContent = meta.root ? String(meta.root) : ''
+    state.meta = { root: String(meta.root || ''), label: String(meta.label || '') }
+    sourceLabelEl.textContent = state.meta.label
+    sourceRootEl.textContent = state.meta.root
   } catch {
     // Non-critical: header just stays blank.
   }
@@ -69,6 +72,26 @@ async function loadChildren (dirPath) {
   const data = await fetchJSON(`/api/tree?path=${encodeURIComponent(dirPath)}`)
   state.children.set(dirPath, data.entries)
   return data.entries
+}
+
+// Re-fetch every currently expanded directory. The scratch-pad file cache is
+// deliberately kept: refreshing the listing must not discard unsaved edits.
+async function refreshTree () {
+  const dirs = ['', ...state.expanded]
+  state.children.clear()
+
+  await Promise.all(dirs.map(async (dir) => {
+    try {
+      await loadChildren(dir)
+    } catch {}
+  }))
+
+  // Dirs that vanished (or failed to reload) collapse out of the tree.
+  for (const dir of state.expanded) {
+    if (!state.children.has(dir)) state.expanded.delete(dir)
+  }
+
+  renderTree()
 }
 
 // ── Tree rendering ──────────────────────────────────────────────────────────
@@ -280,9 +303,17 @@ treeRootEl.addEventListener('keydown', (event) => {
 function hideAllViewers () {
   viewerPlaceholderEl.hidden = true
   viewerEditorEl.hidden = true
+  viewerStatusEl.hidden = true
   viewerImageEl.hidden = true
   viewerBinaryEl.hidden = true
   viewerTooLargeEl.hidden = true
+}
+
+function updateViewerStatus (content) {
+  const text = String(content || '')
+  const lines = text.length === 0 ? 0 : text.split('\n').length
+  const chars = text.length
+  viewerStatusEl.textContent = `${lines} ${lines === 1 ? 'line' : 'lines'} · ${chars} ${chars === 1 ? 'char' : 'chars'}`
 }
 
 function showPlaceholder (message) {
@@ -301,12 +332,15 @@ function getEditor () {
 async function showTextViewer (entry, data, cached) {
   hideAllViewers()
   viewerEditorEl.hidden = false
+  viewerStatusEl.hidden = false
   const editor = getEditor()
 
   const content = cached ? cached.content : data.content
   await editor.setFile({ content, language: data.language })
+  updateViewerStatus(content)
 
   editor.onChange = (doc) => {
+    updateViewerStatus(doc)
     const record = state.fileCache.get(entry.path)
     if (!record) return
     record.content = doc
@@ -426,6 +460,25 @@ document.addEventListener('keydown', (event) => {
   if (isSave) {
     event.preventDefault()
     showToast('scratch pad — edits are never saved')
+    return
+  }
+
+  // Single-key shortcuts must not fire while typing in the editor or an input.
+  if (event.metaKey || event.ctrlKey || event.altKey) return
+  if (event.target.closest('.cm-editor, input, textarea')) return
+
+  if (event.key === 'r' || event.key === 'R') {
+    event.preventDefault()
+    refreshTree().then(() => showToast('tree refreshed'))
+  } else if (event.key === 'c' || event.key === 'C') {
+    const entry = findRow(state.focusedPath)
+    if (!entry || !state.meta.root) return
+    event.preventDefault()
+    const absPath = `${state.meta.root}/${entry.path}`
+    navigator.clipboard.writeText(absPath).then(
+      () => showToast(`copied: ${absPath}`),
+      () => showToast('could not copy path')
+    )
   }
 })
 

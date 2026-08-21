@@ -115,6 +115,9 @@ While browsing, also verify the UI basics:
 
 - Expand/collapse directories (click or arrow keys), open text, image, and
   binary files.
+- Press `R` → tree refreshes from disk; files created since launch appear.
+- Focus a row and press `C` → its absolute path is copied to the clipboard.
+- Text files show a line/char count under the editor; it updates as you type.
 - Type in the editor, press `Cmd/Ctrl-S` → toast appears, nothing is written to
   disk, and the tree row shows the dirty dot.
 - Quit with `Ctrl-C` → clean exit (code 130), and no `filebud-*` dir left in

@@ -304,6 +304,20 @@ body {
   height: 100%;
 }
 
+.viewer-status {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+  text-align: right;
+  user-select: none;
+}
+
+.viewer-status[hidden] {
+  display: none;
+}
+
 /* ── Toast ──────────────────────────────────────────────────────────────── */
 
 .toast {
