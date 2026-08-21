@@ -25,6 +25,15 @@ function baseExtensions (handle) {
       if (update.docChanged && typeof handle.onChange === 'function') {
         handle.onChange(update.state.doc.toString())
       }
+
+      if (
+        (update.selectionSet || update.docChanged) &&
+        typeof handle.onCursor === 'function'
+      ) {
+        const pos = update.state.selection.main.head
+        const line = update.state.doc.lineAt(pos)
+        handle.onCursor({ line: line.number, col: pos - line.from + 1 })
+      }
     })
   ]
 }
@@ -55,6 +64,11 @@ export function mount (parent) {
     // A new file should be read from the top, not inherit the previous
     // document's scroll offset.
     view.scrollDOM.scrollTop = 0
+
+    // setState does not fire an update, so report the reset cursor explicitly.
+    if (typeof handle.onCursor === 'function') {
+      handle.onCursor({ line: 1, col: 1 })
+    }
   }
 
   handle.getContent = () => view.state.doc.toString()

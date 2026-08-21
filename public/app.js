@@ -309,11 +309,20 @@ function hideAllViewers () {
   viewerTooLargeEl.hidden = true
 }
 
+const viewerStatus = { line: 1, col: 1, lines: 0, chars: 0 }
+
+function renderViewerStatus () {
+  const { line, col, lines, chars } = viewerStatus
+  const plural = (n, word) => `${n} ${n === 1 ? word : word + 's'}`
+  viewerStatusEl.textContent =
+    `Ln ${line}, Col ${col} · ${plural(lines, 'line')} · ${plural(chars, 'char')}`
+}
+
 function updateViewerStatus (content) {
   const text = String(content || '')
-  const lines = text.length === 0 ? 0 : text.split('\n').length
-  const chars = text.length
-  viewerStatusEl.textContent = `${lines} ${lines === 1 ? 'line' : 'lines'} · ${chars} ${chars === 1 ? 'char' : 'chars'}`
+  viewerStatus.lines = text.length === 0 ? 0 : text.split('\n').length
+  viewerStatus.chars = text.length
+  renderViewerStatus()
 }
 
 function showPlaceholder (message) {
@@ -336,8 +345,19 @@ async function showTextViewer (entry, data, cached) {
   const editor = getEditor()
 
   const content = cached ? cached.content : data.content
+
+  // Reset for the new document; onCursor below keeps it live afterwards.
+  viewerStatus.line = 1
+  viewerStatus.col = 1
+
   await editor.setFile({ content, language: data.language })
   updateViewerStatus(content)
+
+  editor.onCursor = ({ line, col }) => {
+    viewerStatus.line = line
+    viewerStatus.col = col
+    renderViewerStatus()
+  }
 
   editor.onChange = (doc) => {
     updateViewerStatus(doc)
