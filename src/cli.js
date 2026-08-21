@@ -121,6 +121,16 @@ function friendlyMessage (message) {
 export function parseArgs (argv) {
   let result = null
 
+  // Handle -v/--version ourselves: cac's built-in output includes the platform
+  // and node version, but this flag should print nothing but the number.
+  // The flag stays registered on the command below so it still appears in
+  // --help.
+  const args = argv.slice(2)
+  if (args.includes('-v') || args.includes('--version')) {
+    process.stdout.write(`${pkg.version}\n`)
+    return null
+  }
+
   const cli = buildCli((source, options) => {
     result = {
       source,

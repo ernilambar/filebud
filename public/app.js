@@ -16,6 +16,14 @@ const sourceRootEl = document.getElementById('source-root')
 
 const TREE_WIDTH_KEY = 'filebud.treeWidth'
 
+// Injected into index.html at request time by the server (window.filebudToken).
+// Every /api/* call must carry it.
+const TOKEN = window.filebudToken || ''
+
+function apiUrl (url) {
+  return `${url}${url.includes('?') ? '&' : '?'}t=${encodeURIComponent(TOKEN)}`
+}
+
 const ICONS = {
   chevron: '<svg viewBox="0 0 16 16" class="chevron" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
   folder: '<svg viewBox="0 0 16 16" class="icon" aria-hidden="true"><path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.13a1.5 1.5 0 0 1 1.06.44L7.7 3.5H13.5A1.5 1.5 0 0 1 15 5v7.5A1.5 1.5 0 0 1 13.5 14h-11A1.5 1.5 0 0 1 1 12.5v-9z" fill="currentColor"/></svg>',
@@ -37,7 +45,7 @@ const state = {
 }
 
 function fetchJSON (url, options) {
-  return fetch(url, options).then(async (res) => {
+  return fetch(apiUrl(url), options).then(async (res) => {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       throw new Error(body.error || `request failed: ${res.status}`)
@@ -313,7 +321,7 @@ function showImageViewer (entry, data) {
   viewerImageEl.innerHTML = ''
 
   const img = document.createElement('img')
-  img.src = `/api/raw?path=${encodeURIComponent(entry.path)}`
+  img.src = apiUrl(`/api/raw?path=${encodeURIComponent(entry.path)}`)
   img.alt = entry.name
 
   const meta = document.createElement('div')
@@ -330,7 +338,7 @@ function showImageViewer (entry, data) {
 function showBinaryViewer (entry, data) {
   hideAllViewers()
   viewerBinaryEl.hidden = false
-  const rawUrl = `/api/raw?path=${encodeURIComponent(entry.path)}`
+  const rawUrl = apiUrl(`/api/raw?path=${encodeURIComponent(entry.path)}`)
   viewerBinaryEl.innerHTML = `
     ${ICONS.binaryLarge}
     <div class="filename">${escapeHtml(entry.name)}</div>
@@ -346,7 +354,7 @@ function showTooLargeViewer (entry, data) {
   const reason = data.reason === 'long-lines'
     ? 'contains lines too long to render'
     : `exceeds the display size limit (${data.sizeHuman})`
-  const rawUrl = `/api/raw?path=${encodeURIComponent(entry.path)}`
+  const rawUrl = apiUrl(`/api/raw?path=${encodeURIComponent(entry.path)}`)
   viewerTooLargeEl.innerHTML = `
     ${ICONS.tooLargeLarge}
     <div class="filename">${escapeHtml(entry.name)}</div>

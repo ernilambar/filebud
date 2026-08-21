@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const tempDirs = new Set()
+const shutdownHooks = []
 let listenersRegistered = false
 let cleanedUp = false
 
@@ -25,21 +26,66 @@ export function cleanupAll () {
   tempDirs.clear()
 }
 
-function registerListeners () {
+/**
+ * Register an async function to run before temp cleanup on shutdown.
+ * Used so `fastify.close()` finishes before any temp dir is removed.
+ */
+export function onShutdown (fn) {
+  shutdownHooks.push(fn)
+}
+
+async function runShutdownHooks () {
+  for (const hook of shutdownHooks) {
+    try {
+      await hook()
+    } catch {}
+  }
+}
+
+function fatal (error, exitCode) {
+  const message = error instanceof Error ? (error.stack || error.message) : String(error)
+  process.stderr.write(`filebud: unexpected error: ${message}\n`)
+
+  // Best effort: let async hooks (server close) settle, then clean up and exit.
+  runShutdownHooks()
+    .catch(() => {})
+    .finally(() => {
+      cleanupAll()
+      process.exit(exitCode)
+    })
+}
+
+/**
+ * Register exit/signal listeners once. Called automatically by createTempDir,
+ * and explicitly by the CLI entry so a folder-only session still shuts down
+ * gracefully.
+ */
+export function registerCleanupListeners () {
   if (listenersRegistered) return
   listenersRegistered = true
 
   process.on('exit', cleanupAll)
 
   process.on('SIGINT', () => {
-    cleanupAll()
-    process.exit(130)
+    runShutdownHooks()
+      .catch(() => {})
+      .finally(() => {
+        cleanupAll()
+        process.exit(130)
+      })
   })
 
   process.on('SIGTERM', () => {
-    cleanupAll()
-    process.exit(143)
+    runShutdownHooks()
+      .catch(() => {})
+      .finally(() => {
+        cleanupAll()
+        process.exit(143)
+      })
   })
+
+  process.on('uncaughtException', (error) => fatal(error, 1))
+  process.on('unhandledRejection', (error) => fatal(error, 1))
 }
 
 /**
@@ -47,7 +93,7 @@ function registerListeners () {
  * Only dirs returned by this function are ever deleted.
  */
 export async function createTempDir () {
-  registerListeners()
+  registerCleanupListeners()
 
   return new Promise((resolve, reject) => {
     mkdtemp(join(tmpdir(), 'filebud-'), (error, dir) => {

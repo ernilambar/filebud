@@ -20,6 +20,13 @@
   box-sizing: border-box;
 }
 
+/* Class rules like .viewer-image { display: flex } would otherwise beat the
+   UA stylesheet's [hidden] rule, leaving stale viewers visible next to the
+   active one and squeezing the editor out of its full height. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   height: 100%;

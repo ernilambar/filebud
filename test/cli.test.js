@@ -58,10 +58,10 @@ test('-h matches --help', async () => {
   assert.equal(short.stdout, long.stdout)
 })
 
-test('--version prints the package version and exits 0', async () => {
+test('--version prints only the version and exits 0', async () => {
   const { stdout } = await runCli(['--version'])
 
-  assert.match(stdout, new RegExp(pkg.version.replace(/\./g, '\\.')))
+  assert.equal(stdout, `${pkg.version}\n`)
 })
 
 test('-v matches --version', async () => {

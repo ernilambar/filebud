@@ -51,6 +51,10 @@ export function mount (parent) {
       doc: content,
       extensions: [...baseExtensions(handle), ...languageExtension]
     }))
+
+    // A new file should be read from the top, not inherit the previous
+    // document's scroll offset.
+    view.scrollDOM.scrollTop = 0
   }
 
   handle.getContent = () => view.state.doc.toString()
