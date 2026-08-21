@@ -82,6 +82,13 @@ const TEXT_MIMES = {
 }
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+
+// Extension-less config files that need an explicit CodeMirror language.
+// INI has no dedicated mode; Java properties use the same key=value syntax.
+const LANGUAGE_OVERRIDES = {
+  '.editorconfig': 'Properties files',
+  '.ini': 'Properties files'
+}
 // Absolute ceiling even with force=1: the whole file is read into memory.
 export const HARD_MAX_FILE_SIZE = 200 * 1024 * 1024 // 200 MB
 export const MAX_LINE_LENGTH = 500 * 1024 // 500 KB
@@ -149,8 +156,8 @@ export function getFileType (filename) {
   }
 
   // 3. CodeMirror language-data lookup
-  let language = null
-  if (LanguageDescription) {
+  let language = LANGUAGE_OVERRIDES[base] || null
+  if (!language && LanguageDescription) {
     const match = LanguageDescription.matchFilename(languages, basename(filename))
     if (match) {
       language = match.name

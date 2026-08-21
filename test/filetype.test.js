@@ -30,6 +30,15 @@ test('filetype classifies text files and resolves language', () => {
   assert.equal(docker.kind, 'text')
   assert.equal(docker.language, 'Dockerfile')
 
+  // Extension-less config file with an explicit language override
+  const editorconfig = getFileType('.editorconfig')
+  assert.equal(editorconfig.kind, 'text')
+  assert.equal(editorconfig.language, 'Properties files')
+
+  const ini = getFileType('config.ini')
+  assert.equal(ini.kind, 'text')
+  assert.equal(ini.language, 'Properties files')
+
   const txt = getFileType('notes.txt')
   assert.equal(txt.kind, 'text')
   assert.equal(txt.mime, 'text/plain')
