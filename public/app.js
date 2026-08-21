@@ -15,6 +15,7 @@ const dividerEl = document.getElementById('divider')
 const toastEl = document.getElementById('toast')
 const sourceLabelEl = document.getElementById('source-label')
 const sourceRootEl = document.getElementById('source-root')
+const appVersionEl = document.getElementById('app-version')
 
 const TREE_WIDTH_KEY = 'filebud.treeWidth'
 
@@ -63,6 +64,7 @@ async function loadMeta () {
     state.meta = { root: String(meta.root || ''), label: String(meta.label || '') }
     sourceLabelEl.textContent = state.meta.label
     sourceRootEl.textContent = state.meta.root
+    appVersionEl.textContent = meta.version ? `v${meta.version}` : ''
   } catch {
     // Non-critical: header just stays blank.
   }

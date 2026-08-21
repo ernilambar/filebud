@@ -69,6 +69,11 @@ body {
   color: var(--text-bright);
 }
 
+.app-version {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
 .app-header-source {
   display: flex;
   align-items: baseline;
