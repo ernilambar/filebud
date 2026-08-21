@@ -131,6 +131,7 @@ export async function fileRoutes (fastify, options) {
       .type(mime)
       .header('content-disposition', 'inline')
       .header('x-content-type-options', 'nosniff')
+      .header('content-security-policy', "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'")
       .send(stream)
   })
 }

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { timingSafeEqual } from 'node:crypto'
 import fastify from 'fastify'
 import fastifyStatic from '@fastify/static'
 import { treeRoutes } from './routes/tree.js'
@@ -17,6 +18,13 @@ function getIndexHtml () {
     cachedIndexHtml = readFileSync(join(publicDir, 'index.html'), 'utf8')
   }
   return cachedIndexHtml
+}
+
+function tokensMatch (supplied, token) {
+  const suppliedBuf = Buffer.from(supplied)
+  const tokenBuf = Buffer.from(token)
+  if (suppliedBuf.length !== tokenBuf.length) return false
+  return timingSafeEqual(suppliedBuf, tokenBuf)
 }
 
 export class PortInUseError extends Error {
@@ -60,7 +68,7 @@ export async function createServer (config) {
       const query = request.query || {}
       const supplied = query.t ?? request.headers['x-filebud-token']
 
-      if (supplied !== token) {
+      if (typeof supplied !== 'string' || !tokensMatch(supplied, token)) {
         return reply.code(403).send({ error: 'missing or invalid session token' })
       }
     })
