@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>filebud</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app">
+    <header id="app-header" class="app-header">
+      <div class="app-header-title">
+        <span class="app-name">filebud</span>
+        <span class="scratch-badge" title="Nothing you type here is written to disk">
+          scratch pad — edits are never saved
+        </span>
+      </div>
+      <div class="app-header-source">
+        <span id="source-label" class="source-label"></span>
+        <span id="source-root" class="source-root"></span>
+      </div>
+    </header>
+
+    <main class="app-body">
+      <nav id="tree-pane" class="tree-pane" aria-label="File tree">
+        <div id="tree-root" role="tree" aria-label="Files"></div>
+      </nav>
+
+      <div id="divider" class="divider" role="separator" aria-orientation="vertical"
+        aria-label="Resize panes" tabindex="0"></div>
+
+      <section id="viewer-pane" class="viewer-pane" aria-label="File viewer">
+        <div id="viewer-placeholder" class="viewer-placeholder">
+          No file selected
+        </div>
+        <div id="viewer-editor" class="viewer-editor" hidden></div>
+        <div id="viewer-image" class="viewer-image" hidden></div>
+        <div id="viewer-binary" class="viewer-binary" hidden></div>
+        <div id="viewer-too-large" class="viewer-too-large" hidden></div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <script>window.filebudToken = '__FILEBUD_TOKEN__'</script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
