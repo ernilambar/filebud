@@ -2,6 +2,7 @@
 // viewer pane and drives everything (including keyboard nav) from `state`.
 
 import { mount as mountEditor } from './editor/main.js'
+import { iconForFile } from './file-icons.js'
 
 const treeRootEl = document.getElementById('tree-root')
 const viewerPlaceholderEl = document.getElementById('viewer-placeholder')
@@ -124,7 +125,7 @@ function renderTree () {
       el.setAttribute('aria-expanded', String(isExpanded))
       el.innerHTML = `${ICONS.chevron}${ICONS.folder}<span class="name">${escapeHtml(entry.name)}</span>`
     } else {
-      const icon = entry.kind === 'image' ? ICONS.image : ICONS.file
+      const icon = iconForFile(entry.name) || (entry.kind === 'image' ? ICONS.image : ICONS.file)
       const cached = state.fileCache.get(entry.path)
       const dirty = cached && cached.dirty
       el.innerHTML =
