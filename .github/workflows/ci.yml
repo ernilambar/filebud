@@ -3,7 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**', '.gitignore']
   pull_request:
+    paths-ignore: ['**/*.md', 'docs/**', '.gitignore']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,8 +44,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
 
-      # npm ci runs the `prepare` script, which bundles the CodeMirror editor
-      # into public/editor/ — so this also fails if the rollup build breaks.
+      # npm ci runs the `prepare` script.
       - name: Install dependencies
         run: npm ci
 
