@@ -30,8 +30,8 @@
   ],
   "scripts": {
     "build": "rollup -c",
-    "lint": "standard",
-    "lint:fix": "standard --fix",
+    "lint": "eslint .",
+    "format": "eslint . --fix",
     "prepare": "npm run build",
     "start": "node bin/filebud.js",
     "test": "node --test test/*.test.js"
@@ -49,18 +49,11 @@
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "16.0.3",
-    "rollup": "4.62.5",
-    "standard": "17.1.2"
+    "eslint": "^9.39.5",
+    "neostandard": "0.13.0",
+    "rollup": "4.62.5"
   },
   "engines": {
     "node": ">=22"
-  },
-  "standard": {
-    "ignore": [
-      "public/editor/"
-    ],
-    "env": [
-      "browser"
-    ]
   }
 }
