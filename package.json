@@ -30,8 +30,8 @@
   ],
   "scripts": {
     "build": "rollup -c",
-    "lint": "eslint .",
     "format": "eslint . --fix",
+    "lint": "eslint .",
     "prepare": "npm run build",
     "start": "node bin/filebud.js",
     "test": "node --test test/*.test.js"
