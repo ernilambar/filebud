@@ -24,11 +24,24 @@ dir that is removed when filebud exits.
 
 ## Install
 
+filebud is distributed from GitHub, not npm. Requires Node 22 or newer.
+
+Install globally from the repository:
+
 ```sh
-npm install -g filebud
+npm install -g github:ernilambar/filebud
 ```
 
-Requires Node 22 or newer.
+Or run it without installing:
+
+```sh
+npx github:ernilambar/filebud <folder | archive | archive-url> [options]
+```
+
+npm clones the repo and builds the editor bundle via the `prepare` script, so
+installing requires network access and a normal `npm install` (do not pass
+`--ignore-scripts`). To pin a release, append a tag or commit:
+`github:ernilambar/filebud#v0.1.0`.
 
 ## Usage
 
