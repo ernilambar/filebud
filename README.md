@@ -24,26 +24,18 @@ dir that is removed when filebud exits.
 
 ## Install
 
-filebud is distributed from GitHub. Requires Node 22 or newer. Clone the repository, build it, and install the CLI globally:
+Requires Node 22 or newer.
+
+Install globally from npm:
 
 ```sh
-git clone https://github.com/ernilambar/filebud.git
-cd filebud
-npm install
-npm install -g .
+npm install -g filebud
 ```
 
-`npm install` builds the editor bundle via the `prepare` script, and the global
-install step links the `filebud` command. Both must run normally — do not pass
-`--ignore-scripts`, or the bundle never gets built.
-
-To update later, pull and reinstall:
+Or run it without installing:
 
 ```sh
-cd filebud
-git pull
-npm install
-npm install -g .
+npx filebud <folder | archive | archive-url> [options]
 ```
 
 ## Usage
@@ -142,4 +134,3 @@ While browsing, also verify the UI basics:
 ## License
 
 [MIT](LICENSE) © [Nilambar Sharma](https://www.nilambar.net)
-

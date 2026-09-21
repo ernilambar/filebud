@@ -19,6 +19,7 @@
     "url": "git+https://github.com/ernilambar/filebud.git"
   },
   "license": "MIT",
+  "author": "Nilambar Sharma <nilambar@outlook.com> (https://www.nilambar.net)",
   "type": "module",
   "bin": {
     "filebud": "./bin/filebud.js"
@@ -29,10 +30,12 @@
     "public"
   ],
   "scripts": {
+    "prebuild": "rimraf public/editor",
     "build": "rollup -c",
     "format": "eslint . --fix",
     "lint": "eslint .",
     "prepare": "npm run build",
+    "prepublishOnly": "npm run lint && npm test",
     "start": "node bin/filebud.js",
     "test": "node --test test/*.test.js"
   },
@@ -51,6 +54,7 @@
     "@rollup/plugin-node-resolve": "16.0.3",
     "eslint": "^9.39.5",
     "neostandard": "0.13.0",
+    "rimraf": "6.1.3",
     "rollup": "4.62.5"
   },
   "engines": {
